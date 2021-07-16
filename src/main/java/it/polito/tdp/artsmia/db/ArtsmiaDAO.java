@@ -6,8 +6,11 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
+import it.polito.tdp.artsmia.model.Adiacenza;
 import it.polito.tdp.artsmia.model.ArtObject;
+import it.polito.tdp.artsmia.model.Artist;
 import it.polito.tdp.artsmia.model.Exhibition;
 
 public class ArtsmiaDAO {
@@ -54,6 +57,117 @@ public class ArtsmiaDAO {
 						res.getInt("begin"), res.getInt("end"));
 				
 				result.add(exObj);
+			}
+			conn.close();
+			return result;
+			
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+
+	public List<String> getRuoli() {
+		String sql = "SELECT DISTINCT role "
+				+ "FROM authorship "
+				+ "ORDER BY role";
+		
+		List<String> result = new ArrayList<>();
+		Connection conn = DBConnect.getConnection();
+
+		try {
+			PreparedStatement st = conn.prepareStatement(sql);
+			ResultSet res = st.executeQuery();
+			while (res.next()) {
+				result.add(res.getString("role"));
+			}
+			conn.close();
+			return result;
+			
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return null;
+		}
+		
+	}
+
+	public void listArtists(Map<Integer, Artist> idMap) {
+		String sql = "SELECT artist_id, name "
+				+ "FROM artists";
+
+		Connection conn = DBConnect.getConnection();
+
+		try {
+			PreparedStatement st = conn.prepareStatement(sql);
+			ResultSet res = st.executeQuery();
+			while (res.next()) {
+				if(!idMap.containsKey(res.getInt("artist_id"))) {
+					Artist a = new Artist(res.getInt("artist_id"), res.getString("name"));
+					idMap.put(a.getId(), a);
+				}
+			}
+			conn.close();
+			
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		
+	}
+
+	public List<Artist> getArtistiByRuolo(String ruolo, Map<Integer, Artist> idMap) {
+		
+		String sql = "SELECT DISTINCT artist_id "
+				+ "FROM authorship "
+				+ "WHERE role = ?";
+		
+		List<Artist> result = new ArrayList<>();
+		Connection conn = DBConnect.getConnection();
+
+		try {
+			PreparedStatement st = conn.prepareStatement(sql);
+			st.setString(1, ruolo);
+			ResultSet res = st.executeQuery();
+			while (res.next()) {
+				Artist a = idMap.get(res.getInt("artist_id"));
+				if(a!=null) {
+					result.add(a);
+				}
+			}
+			conn.close();
+			return result;
+			
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return null;
+		}
+		
+	}
+
+	public List<Adiacenza> getAdiacenze(String ruolo, Map<Integer, Artist> idMap) {
+		String sql = "SELECT a1.artist_id AS id1, a2.artist_id AS id2, "
+				+ "COUNT(DISTINCT e1.exhibition_id) AS peso "
+				+ "FROM authorship AS a1, authorship AS a2, exhibition_objects AS e1, "
+				+ "exhibition_objects AS e2 "
+				+ "WHERE a1.artist_id > a2.artist_id AND a1.object_id = e1.object_id "
+				+ "AND a2.object_id = e2.object_id "
+				+ "AND a1.role = ? AND a1.role = a2.role "
+				+ "AND e1.exhibition_id = e2.exhibition_id "
+				+ "GROUP BY a1.artist_id, a2.artist_id";
+		
+		List<Adiacenza> result = new ArrayList<>();
+		Connection conn = DBConnect.getConnection();
+
+		try {
+			PreparedStatement st = conn.prepareStatement(sql);
+			st.setString(1, ruolo);
+			ResultSet res = st.executeQuery();
+			while (res.next()) {
+				Artist a1 = idMap.get(res.getInt("id1"));
+				Artist a2 = idMap.get(res.getInt("id2"));
+				if(a1!=null && a2!=null) {
+					Adiacenza a = new Adiacenza(a1,a2, res.getInt("peso"));
+					result.add(a);
+				}
 			}
 			conn.close();
 			return result;

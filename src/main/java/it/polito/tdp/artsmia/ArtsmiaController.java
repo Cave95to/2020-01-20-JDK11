@@ -1,8 +1,11 @@
 package it.polito.tdp.artsmia;
 
 import java.net.URL;
+import java.util.List;
 import java.util.ResourceBundle;
 
+import it.polito.tdp.artsmia.model.Adiacenza;
+import it.polito.tdp.artsmia.model.Artist;
 import it.polito.tdp.artsmia.model.Model;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -31,7 +34,7 @@ public class ArtsmiaController {
     private Button btnCalcolaPercorso;
 
     @FXML
-    private ComboBox<?> boxRuolo;
+    private ComboBox<String> boxRuolo;
 
     @FXML
     private TextField txtArtista;
@@ -42,23 +45,76 @@ public class ArtsmiaController {
     @FXML
     void doArtistiConnessi(ActionEvent event) {
     	txtResult.clear();
-    	txtResult.appendText("Calcola artisti connessi");
+    	this.txtArtista.clear();
+    	txtResult.appendText("Calcola artisti connessi\n");
+    	List<Adiacenza> result = this.model.getAdiacenze();
+    	if(result.size()==0) {
+    		this.txtResult.appendText("non ci sono coppie di artisti");
+    	}
+    	else {
+    		for(Adiacenza a : result)
+    			this.txtResult.appendText(a.toString());
+    	}
+    	
+    	
     }
 
     @FXML
     void doCalcolaPercorso(ActionEvent event) {
     	txtResult.clear();
     	txtResult.appendText("Calcola percorso");
+    	
+    	try {
+    	
+    		Integer id = Integer.parseInt(this.txtArtista.getText());
+    		if(!this.model.contieneId(id)) {
+    			this.txtResult.setText("codice id non corrisponde a nessun vertice del grafo");
+    			return;
+    		}
+    		
+    		List<Artist> percorso = this.model.calcolaPercorso(id);
+    		if(percorso.size()==0) {
+    			this.txtResult.setText("nodo isolato");
+    			return;
+    		}
+    		
+    		this.txtResult.setText("percorso più lungo: "+percorso.size() +"\n");
+    		
+    		for(Artist a : percorso)
+    			this.txtResult.appendText(a.toString());
+    	}catch(NumberFormatException e) {
+    		this.txtResult.setText("inserire un codice numerico");
+    	}
+    	
+   
     }
 
     @FXML
     void doCreaGrafo(ActionEvent event) {
     	txtResult.clear();
-    	txtResult.appendText("Crea grafo");
+    	this.txtArtista.clear();
+    	txtResult.appendText("Crea grafo\n");
+    	
+    	String ruolo = this.boxRuolo.getValue();
+    	
+    	if(ruolo==null) {
+    		this.txtResult.setText("selezionare un ruolo");
+    		return;
+    	}
+    	
+    	this.model.creaGrafo(ruolo);
+    	
+    	this.txtResult.appendText("#vertici: " +this.model.getNVertici()+"\n");
+    	
+    	this.txtResult.appendText("#archi: " +this.model.getNArchi()+"\n");
+    	
+    	this.btnArtistiConnessi.setDisable(false);
+    	this.btnCalcolaPercorso.setDisable(false);
     }
 
     public void setModel(Model model) {
     	this.model = model;
+    	this.boxRuolo.getItems().addAll(this.model.getRuoli());
     }
 
     
